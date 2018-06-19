@@ -313,7 +313,7 @@ void draw_all_trams() {
 }
 
 void draw_tram(int i, tram_t * t, int current_time){  
-    const int TRAM_HEIGHT = 20; 
+    const int TRAM_HEIGHT = 21; 
     int row_position = 0;
     char arrival_time[6] = {0};
     
@@ -332,7 +332,7 @@ void draw_tram(int i, tram_t * t, int current_time){
       display.drawString(0, ((i * TRAM_HEIGHT) +5), String(time_till_arrival)+"m");
     }
     display.drawString(25, ((i * TRAM_HEIGHT) +5), t->destination);
-    display.drawLine(5, (i * TRAM_HEIGHT)+TRAM_HEIGHT, DISPLAY_WIDTH-5, (i * TRAM_HEIGHT)+TRAM_HEIGHT);
+    display.drawLine(0, (i * TRAM_HEIGHT)+TRAM_HEIGHT+1, DISPLAY_WIDTH, (i * TRAM_HEIGHT)+TRAM_HEIGHT+1);
 }
 
 int Start_WiFi(const char* ssid, const char* password)
@@ -381,10 +381,10 @@ void setup(){
   display.setFont(ArialMT_Plain_10);
 
   display.drawXbm(34, 0, tramchester_width, tramchester_height, tramchester_bits);
+  display.drawString(75, 46, "Mini");
   display.display();
   
-  //draw_string(BOOT_MESSAGE);
-  delay(3000);
+  delay(5000);
   draw_string(WIFI_CONNECTING);
   
   int wifi_status = Start_WiFi(ssid, password);
