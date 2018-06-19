@@ -7,7 +7,7 @@
 #include "OLEDDisplayUi.h"
 #include "config.h"
 #define TZ_OFFSET 3600
-
+#include "images.h"
 
 SSD1306  display(0x3c, 4, 15);
 WiFiClientSecure client; // wifi client object
@@ -370,9 +370,12 @@ void setup(){
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
+
+  display.drawXbm(34, 0, tramchester_width, tramchester_height, tramchester_bits);
+  display.display();
   
-  draw_string(BOOT_MESSAGE);
-  delay(1000);
+  //draw_string(BOOT_MESSAGE);
+  delay(3000);
   draw_string(WIFI_CONNECTING);
   
   int wifi_status = Start_WiFi(ssid, password);
@@ -383,6 +386,7 @@ void setup(){
   }
   
   configTime(1, 3600, "pool.ntp.org");
+  draw_string(DATA_LOADING);
   load_trams();
 }
 
