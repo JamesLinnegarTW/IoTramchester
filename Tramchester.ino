@@ -245,7 +245,8 @@ void load_trams() {
   client.stop();
   
   Serial.println();
-  Serial.println("closing connection");
+  Serial.println(F("closing connection"));
+  tram_list_all();
   
 }
 
@@ -260,7 +261,7 @@ void show_time()
   struct tm tm;
   if (!getLocalTime(&tm))
   {
-    Serial.println("Failed to obtain time");
+    Serial.println(F("Failed to obtain time"));
     return;
   }
 
@@ -288,13 +289,13 @@ void draw_all_trams() {
     int current_time = NULL;
     struct tm tm;
     if (!getLocalTime(&tm)) {
-      Serial.println("Failed to obtain time");
+      Serial.println(F("Failed to obtain time"));
     } else {
       current_time = (tm.tm_hour * 60) + tm .tm_min; 
     }
   
     display.clear();
-    for(int i = 0; i <= 4; i++){
+    for(int i = 0; i <= 3; i++){
        t = tram_find(i);
        if(t != NULL) { 
           draw_tram(i, t, current_time);
@@ -304,21 +305,25 @@ void draw_all_trams() {
 }
 
 void draw_tram(int i, tram_t * t, int current_time){  
-    bool is_arriving = strcmp(t->status, "Arriving") == 0;
+    const int TRAM_HEIGHT = 20; 
+    int row_position = 0;
+    bool is_due = strcmp(t->status, "Due") == 0;
     char arrival_time[6] = {0};
+    
     int_to_time(arrival_time, t->arrival);
 
-    display.setColor((is_arriving)?WHITE:BLACK);
-    display.fillRect(0, (i*14)-12, DISPLAY_WIDTH, (i*14)+2);
-    display.setColor((is_arriving)? BLACK:WHITE); // alternate colors
+    display.setColor((is_due)?BLACK:WHITE);
+    display.fillRect(0, (i*TRAM_HEIGHT)-(TRAM_HEIGHT-2), DISPLAY_WIDTH, (i*TRAM_HEIGHT)+2);
+    display.setColor((is_due)?WHITE:BLACK);
     display.setTextAlignment(TEXT_ALIGN_LEFT);
     display.setFont(ArialMT_Plain_10);
+    
     if(current_time == NULL){
-      display.drawString(2, (i * 14)-12, arrival_time);
+      display.drawString(5, ((i * TRAM_HEIGHT) +5)- TRAM_HEIGHT, arrival_time);
     } else {
-      display.drawString(2, (i * 14)-12, String(t->arrival - current_time));
+      display.drawString(5, ((i * TRAM_HEIGHT) +5) - TRAM_HEIGHT, String(t->arrival - current_time)+"m");
     }
-    display.drawString(35, (i*14)-12, t->destination);
+    display.drawString(35, ((i * TRAM_HEIGHT) +5) - TRAM_HEIGHT, t->destination);
 }
 
 int Start_WiFi(const char* ssid, const char* password)
@@ -327,16 +332,16 @@ int Start_WiFi(const char* ssid, const char* password)
   Serial.println("\r\nConnecting to: " + String(ssid));
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED ) {
-    delay(500);
+    delay(1000);
     Serial.print(".");
     
-    if (connAttempts > 20)
+    if (connAttempts > 30)
       return -5;
     connAttempts++;
   }
 
-  Serial.println("WiFi connected\r\n");
-  Serial.print("IP address: ");
+  Serial.println(F("WiFi connected\r\n"));
+  Serial.print(F("IP address: "));
   Serial.println(WiFi.localIP());
   return 1;
 }
@@ -344,7 +349,8 @@ int Start_WiFi(const char* ssid, const char* password)
 void draw_string(const char* message){
     display.clear();
     display.setFont(ArialMT_Plain_10);
-    display.drawString(2, 14, message);
+    display.setTextAlignment(TEXT_ALIGN_CENTER);
+    display.drawString(DISPLAY_WIDTH / 2, (DISPLAY_HEIGHT / 2)-5, message);
     display.display();
 }
 
@@ -352,17 +358,23 @@ void draw_string(const char* message){
  *  RUN
  */
 void setup(){
-  // put your setup code here, to run once:
+
+  // Screen reset
   pinMode(16,OUTPUT);
-  digitalWrite(16, LOW);    // set GPIO16 low to reset OLED
+  digitalWrite(16, LOW);    
   delay(50); 
-  digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 in high
+  digitalWrite(16, HIGH); 
 
   Serial.begin(115200);
+  
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
+  
+  draw_string(BOOT_MESSAGE);
+  delay(1000);
   draw_string(WIFI_CONNECTING);
+  
   int wifi_status = Start_WiFi(ssid, password);
 
   if(wifi_status == -5){
@@ -378,7 +390,6 @@ void loop(){
   
   if(millis() - last_tram_load > load_interval){
     load_trams();
-    tram_list_all();
   } else {
     if(millis() - last_tram_render > render_interval){
       draw_all_trams();
