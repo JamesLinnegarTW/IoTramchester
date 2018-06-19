@@ -282,24 +282,32 @@ void show_time()
 
 }
 
-
-
-void draw_all_trams() {
-    tram_t * t = NULL;
+int get_current_time(){
     int current_time = NULL;
     struct tm tm;
+    
     if (!getLocalTime(&tm)) {
       Serial.println(F("Failed to obtain time"));
+      return -1;
     } else {
       current_time = (tm.tm_hour * 60) + tm .tm_min; 
+      return current_time;
     }
-  
+}
+
+void draw_all_trams() {
+    tram_t * t = tram_list;
+    int current_time = get_current_time();
+    int number_of_trams = 3;
+    int trams_rendered = 0;   
+
     display.clear();
-    for(int i = 0; i <= 3; i++){
-       t = tram_find(i);
-       if(t != NULL) { 
-          draw_tram(i, t, current_time);
-       }
+    while(t != NULL && trams_rendered <= number_of_trams){
+     if(strcmp(t->status, "Departing") != 0){
+        draw_tram(trams_rendered, t, current_time);
+        trams_rendered++;
+      }
+      t = t->next;
     }
     display.display();
 }
@@ -307,23 +315,23 @@ void draw_all_trams() {
 void draw_tram(int i, tram_t * t, int current_time){  
     const int TRAM_HEIGHT = 20; 
     int row_position = 0;
-    bool is_due = strcmp(t->status, "Due") == 0;
     char arrival_time[6] = {0};
     
     int_to_time(arrival_time, t->arrival);
-
-    display.setColor((is_due)?BLACK:WHITE);
-    display.fillRect(0, (i*TRAM_HEIGHT)-(TRAM_HEIGHT-2), DISPLAY_WIDTH, (i*TRAM_HEIGHT)+2);
-    display.setColor((is_due)?WHITE:BLACK);
+    
     display.setTextAlignment(TEXT_ALIGN_LEFT);
     display.setFont(ArialMT_Plain_10);
     
     if(current_time == NULL){
-      display.drawString(5, ((i * TRAM_HEIGHT) +5)- TRAM_HEIGHT, arrival_time);
+      display.drawString(0, ((i * TRAM_HEIGHT) +5), arrival_time);
     } else {
-      display.drawString(5, ((i * TRAM_HEIGHT) +5) - TRAM_HEIGHT, String(t->arrival - current_time)+"m");
+      int time_till_arrival = t->arrival - current_time;
+      if(time_till_arrival < 0){
+        time_till_arrival = 0;
+      }
+      display.drawString(0, ((i * TRAM_HEIGHT) +5), String(time_till_arrival)+"m");
     }
-    display.drawString(35, ((i * TRAM_HEIGHT) +5) - TRAM_HEIGHT, t->destination);
+    display.drawString(25, ((i * TRAM_HEIGHT) +5), t->destination);
 }
 
 int Start_WiFi(const char* ssid, const char* password)
