@@ -8,12 +8,6 @@
 #include "config.h"
 #define TZ_OFFSET 3600
 
-unsigned long last_tram_load = 0;
-unsigned int load_interval = 20000;
-
-
-unsigned long last_tram_render = 0;
-unsigned int render_interval = 500;
 
 SSD1306  display(0x3c, 4, 15);
 WiFiClientSecure client; // wifi client object
@@ -30,7 +24,6 @@ typedef struct tram {
 } tram_t;
 
 tram_t * tram_list;
-
 
 int time_to_int(char * s){
 
@@ -154,7 +147,7 @@ tram_t * tram_find(int search_index){
 
 void tram_list_all(){
   tram_t * current = tram_list;
-  Serial.println("---------\nCurrent Trams\n---------");
+  Serial.println(F("---------\nCurrent Trams\n---------"));
   while(current != NULL){
     static char arrival_time[6] = {0};
     int_to_time(arrival_time,current->arrival);
@@ -167,7 +160,7 @@ void tram_list_all(){
     
     current = current->next;
   }
-  Serial.println("---------");
+  Serial.println(F("---------"));
 
 }
 
@@ -186,9 +179,9 @@ void load_trams() {
     return;
   }
 
-  client.println("GET /api/departures/station/9400ZZMASHU?notes=0 HTTP/1.0");
-  client.println("Host: www.tramchester.com");
-  client.println("Connection: close");
+  client.println(F("GET /api/departures/station/9400ZZMASHU?notes=0 HTTP/1.0"));
+  client.println(F("Host: www.tramchester.com"));
+  client.println(F("Connection: close"));
     
   if(client.println() == 0) {
     Serial.println(F("Failed to send request"));
@@ -205,18 +198,16 @@ void load_trams() {
     return;
   }
 
-  Serial.println("status fine");
+  Serial.println(F("status fine"));
     // Skip HTTP headers
   char endOfHeaders[] = "\r\n\r\n";
   if (!client.find(endOfHeaders)) {
     Serial.println(F("Invalid response"));
     return;
   }
-  Serial.println("Headers skipped");
+  Serial.println(F("Headers skipped"));
   
- const size_t capacity = JSON_ARRAY_SIZE(0) + JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 6*JSON_OBJECT_SIZE(5) + 60;
  
-
  DynamicJsonBuffer jsonBuffer(capacity);
 
   JsonObject& root = jsonBuffer.parseObject(client);
@@ -224,9 +215,6 @@ void load_trams() {
     Serial.println(F("Parsing failed!"));
     return;
   }
-
-
-    // Extract values
 
   int numberOfTrams = root["departures"].size();
   tram_remove_all();
@@ -262,20 +250,11 @@ void load_trams() {
 }
 
 
-/*
-void show_time(OLEDDisplay *display, OLEDDisplayUiState* state)
+
+void show_time()
 {
 
   static unsigned long start_millis;
-
-  if (start_millis == 0)
-    start_millis = millis();
-  else if (millis() - start_millis > 1500
-           && last_update_sec != 0)
-  {
-    start_millis = 0;
-    ui.nextFrame();
-  }
   
   // just the time
   struct tm tm;
@@ -285,8 +264,8 @@ void show_time(OLEDDisplay *display, OLEDDisplayUiState* state)
     return;
   }
 
-  display->setTextAlignment(TEXT_ALIGN_CENTER);
-  display->setFont(ArialMT_Plain_10);
+  display.setTextAlignment(TEXT_ALIGN_CENTER);
+  display.setFont(ArialMT_Plain_10);
 
   char buf[32];
 
@@ -297,36 +276,48 @@ void show_time(OLEDDisplay *display, OLEDDisplayUiState* state)
            tm.tm_sec
           );
 
-  display->setFont(ArialMT_Plain_10);
-  display->drawString(2, 14, buf);
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(2, 14, buf);
 
 }
-*/
 
 
-void draw_next_tram() {
+
+void draw_all_trams() {
     tram_t * t = NULL;
+    int current_time = NULL;
+    struct tm tm;
+    if (!getLocalTime(&tm)) {
+      Serial.println("Failed to obtain time");
+    } else {
+      current_time = (tm.tm_hour * 60) + tm .tm_min; 
+    }
+  
     display.clear();
     for(int i = 0; i <= 4; i++){
        t = tram_find(i);
        if(t != NULL) { 
-          draw_tram(i, t);
+          draw_tram(i, t, current_time);
        }
     }
     display.display();
 }
 
-void draw_tram(int i, tram_t * t){  
+void draw_tram(int i, tram_t * t, int current_time){  
     bool is_arriving = strcmp(t->status, "Arriving") == 0;
-    char arrivalTime[6] = {0};
-    int_to_time(arrivalTime, t->arrival);
+    char arrival_time[6] = {0};
+    int_to_time(arrival_time, t->arrival);
 
     display.setColor((is_arriving)?WHITE:BLACK);
     display.fillRect(0, (i*14)-12, DISPLAY_WIDTH, (i*14)+2);
     display.setColor((is_arriving)? BLACK:WHITE); // alternate colors
     display.setTextAlignment(TEXT_ALIGN_LEFT);
     display.setFont(ArialMT_Plain_10);
-    display.drawString(2, (i * 14)-12, arrivalTime);
+    if(current_time == NULL){
+      display.drawString(2, (i * 14)-12, arrival_time);
+    } else {
+      display.drawString(2, (i * 14)-12, String(t->arrival - current_time));
+    }
     display.drawString(35, (i*14)-12, t->destination);
 }
 
@@ -338,6 +329,7 @@ int Start_WiFi(const char* ssid, const char* password)
   while (WiFi.status() != WL_CONNECTED ) {
     delay(500);
     Serial.print(".");
+    
     if (connAttempts > 20)
       return -5;
     connAttempts++;
@@ -349,6 +341,12 @@ int Start_WiFi(const char* ssid, const char* password)
   return 1;
 }
 
+void draw_string(const char* message){
+    display.clear();
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(2, 14, message);
+    display.display();
+}
 
 /* 
  *  RUN
@@ -364,8 +362,14 @@ void setup(){
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
+  draw_string(WIFI_CONNECTING);
+  int wifi_status = Start_WiFi(ssid, password);
 
-  Start_WiFi(ssid, password);
+  if(wifi_status == -5){
+    draw_string(WIFI_ERROR);
+    while(true){}
+  }
+  
   configTime(1, 3600, "pool.ntp.org");
   load_trams();
 }
@@ -377,7 +381,7 @@ void loop(){
     tram_list_all();
   } else {
     if(millis() - last_tram_render > render_interval){
-      draw_next_tram();
+      draw_all_trams();
       last_tram_render = millis();
     }
   }
