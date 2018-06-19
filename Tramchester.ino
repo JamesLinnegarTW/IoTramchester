@@ -165,6 +165,7 @@ void tram_list_all(){
 }
 
 void load_trams() {
+
   // put your main code here, to run repeatedly:
   last_tram_load = millis();   
   const char* host = "www.tramchester.com";
@@ -176,6 +177,7 @@ void load_trams() {
   //client.setCACert(test_root_ca);
   if(!client.connect(host, httpPort)) {
     Serial.println("connection failed");
+    draw_string(CONNECTION_ERROR);
     return;
   }
 
@@ -185,6 +187,8 @@ void load_trams() {
     
   if(client.println() == 0) {
     Serial.println(F("Failed to send request"));
+    draw_string(DATA_FAIL);
+    return;
   }
 
     // Check HTTP status
@@ -195,6 +199,7 @@ void load_trams() {
     Serial.println(F("Unexpected response: "));
     Serial.println(status);
     Serial.println(F("-----"));
+    draw_string(DATA_FAIL);
     return;
   }
 
@@ -203,6 +208,8 @@ void load_trams() {
   char endOfHeaders[] = "\r\n\r\n";
   if (!client.find(endOfHeaders)) {
     Serial.println(F("Invalid response"));
+    draw_string(DATA_FAIL);
+    
     return;
   }
   Serial.println(F("Headers skipped"));
@@ -324,14 +331,16 @@ void draw_tram(int i, tram_t * t, int current_time){
     
     if(current_time == NULL){
       display.drawString(0, ((i * TRAM_HEIGHT) +5), arrival_time);
+      display.drawString(35, ((i * TRAM_HEIGHT) +5), t->destination);
     } else {
       int time_till_arrival = t->arrival - current_time;
       if(time_till_arrival < 0){
         time_till_arrival = 0;
       }
       display.drawString(0, ((i * TRAM_HEIGHT) +5), String(time_till_arrival)+"m");
+      display.drawString(25, ((i * TRAM_HEIGHT) +5), t->destination);
     }
-    display.drawString(25, ((i * TRAM_HEIGHT) +5), t->destination);
+
     display.drawLine(0, (i * TRAM_HEIGHT)+TRAM_HEIGHT+1, DISPLAY_WIDTH, (i * TRAM_HEIGHT)+TRAM_HEIGHT+1);
 }
 
