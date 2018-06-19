@@ -332,6 +332,7 @@ void draw_tram(int i, tram_t * t, int current_time){
       display.drawString(0, ((i * TRAM_HEIGHT) +5), String(time_till_arrival)+"m");
     }
     display.drawString(25, ((i * TRAM_HEIGHT) +5), t->destination);
+    display.drawLine(5, (i * TRAM_HEIGHT)+TRAM_HEIGHT, DISPLAY_WIDTH-5, (i * TRAM_HEIGHT)+TRAM_HEIGHT);
 }
 
 int Start_WiFi(const char* ssid, const char* password)
